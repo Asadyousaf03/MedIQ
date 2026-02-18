@@ -1,94 +1,134 @@
 # MediBot - Multi-Agent Healthcare Assistant
 
-This is a Mastra-based multi-agent system for healthcare triage, document explanation, and doctor recommendation. It features a full-stack architecture with an Express-based backend and a Next.js frontend.
+MediBot is a comprehensive, Mastra-based multi-agent healthcare platform designed to provide empathetic triage, medical document explanation (RAG), and healthcare provider recommendations. It features a modern full-stack architecture with a Node.js/Express backend and a Next.js 16 frontend.
 
-## Prerequisites
+---
 
-1.  **Node.js** (v18+)
-2.  **PostgreSQL** (v14+ recommended)
-    -   You should have a running Postgres instance.
-    -   The `pgvector` extension is used if available (refer to `scripts/seed.ts`).
-3.  **Google Gemini API Key** (Get one from [Google AI Studio](https://aistudio.google.com/))
+## 🏛️ Architecture Overview
 
-## Setup & Installation
+The platform is designed with a service-oriented architecture:
 
-### 1. Install Dependencies
+-   **Backend ([root](.)):** An Express-based server orchestrating Mastra agents, tool executions, and database interactions.
+-   **Frontend ([webapp/](webapp/)):** A React 19/Next.js 16 application with a real-time chat interface and file upload support.
+-   **Intelligence Layer (Mastra):**
+    -   **Agents**: Specialized "modes" (Cardiology, Mental Health, Pediatrics, etc.) governed by a unified system prompt.
+    -   **Memory**: Short-term and working memory (Mastra Memory) for context retention.
+    -   **Tools**: Custom tools for searching doctor databases and a RAG-based knowledge search.
+-   **Vector Database (PgVector)**: Stores embeddings for the clinical knowledge base (e.g., DSM-5-TR guidelines) and doctor bios.
 
-You need to install dependencies for both the root (backend) and the webapp (frontend).
+---
 
+## 🛠️ Prerequisites & Setup
+
+### 1. Requirements
+-   **Node.js**: v22.13.0+ (Required by Mastra v1.x)
+-   **PostgreSQL**: v14+ with the `pgvector` extension installed.
+-   **Google Cloud SDK**: Authenticated locally for Vertex AI access.
+
+### 2. Authentication
+MediBot uses **Vertex AI**. You must authenticate your local terminal to access Google Cloud:
 ```bash
-# Install backend dependencies
+gcloud auth application-default login
+```
+
+### 3. Installation
+Install dependencies in both the root and webapp folders:
+```bash
+# Root folder
 npm install
 
-# Install frontend dependencies
+# Webapp folder
 cd webapp
 npm install
 cd ..
 ```
 
-### 2. Environment Variables
+---
 
-Create a `.env` file in the **root** directory (at the same level as `package.json`):
+## ⚙️ Configuration (.env)
+
+Create a `.env` file in the **root** folder with the following variables:
 
 ```env
-# Google AI
-GOOGLE_GENERATIVE_AI_API_KEY=your_gemini_api_key_here
+# Google Vertex AI Configuration
+GOOGLE_VERTEX_PROJECT="your-google-project-id"
+GOOGLE_VERTEX_LOCATION="us-central1"
 
-# Database
+# Database Configuration
 # Format: postgresql://[user]:[password]@[host]:[port]/[database]
-POSTGRES_CONNECTION_STRING=postgresql://postgres:password@localhost:5432/medibot
+POSTGRES_CONNECTION_STRING=postgresql://postgres:admin@localhost:5432/medibot
 
-# Optional
+# Backend Configuration (Optional)
 PORT=3001
 ```
 
-### 3. Database & Knowledge Base Setup
+---
 
-Ensure your Postgres database (e.g., `medibot`) is created before running these.
+## 📊 Data Preparation
 
+MediBot requires two key data ingestion steps to be fully functional:
+
+### 1. Seed Doctor Database
+Populates the system with mock healthcare providers, specialties, and bios for the `searchDoctors` tool.
 ```bash
-# 1. Create tables and seed mock doctor data
 npm run seed
-
-# 2. Ingest clinical knowledge base (requires PDFs in src/lib/knowledge-base/)
-npm run ingest-kb
 ```
 
-## Running the Application
+### 2. Ingest Knowledge Base (RAG)
+Analyze and index clinical PDFs (like DSM-5-TR) into the vector store.
+1.  Place medical PDFs in `src/lib/knowledge-base/`.
+2.  Run the ingestion script:
+    ```bash
+    npm run ingest-kb
+    ```
+    *Note: This script uses batching (30 chunks/batch) to stay within Vertex AI's token limits and uses `gemini-embedding-001` (768 dimensions).*
 
-You need to run both the backend and frontend servers simultaneously.
+---
 
-### Start Backend (Port 3001)
-From the root directory:
+## 🚀 Running the Application
+
+You must run both the backend and frontend simultaneously:
+
+**Terminal 1: Backend**
 ```bash
 npm run dev
 ```
 
-### Start Frontend (Port 3000)
-From the `webapp` directory:
+**Terminal 2: Frontend**
 ```bash
 cd webapp
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Visit: [http://localhost:3000](http://localhost:3000)
 
-## Architecture
+---
 
--   **Backend**: Node.js/Express, Mastra Framework, PostgreSQL.
--   **Frontend**: Next.js 16, Tailwind CSS.
--   **AI Agents**:
-    -   `Triage Agent`: Patient symptom analysis.
-    -   `Doc Explainer`: Medical document simplification.
-    -   `Doctor Recommender`: Queries Postgres for specialists.
+## 🧠 Core Features & Specialized Modes
 
-## Potential Issues & Troubleshooting
+MediBot automatically adapts its behavior based on user input:
 
--   **Database Connection**: Ensure `POSTGRES_CONNECTION_STRING` is correct. If using Docker, use `localhost` or the container name.
--   **`pgvector` Extension**: The `seed` script attempts to create the `vector` extension. This requires the user to have `pgvector` installed on their Postgres server. If it fails, you may need to install it manually.
--   **Missing API Key**: The application will fail to generate responses without a valid `GOOGLE_GENERATIVE_AI_API_KEY`.
--   **Port Conflicts**: By default, the backend uses `3001` and the frontend uses `3000`. Ensure these ports are available.
--   **Knowledge Base Ingestion**: If `npm run ingest-kb` reports 0 files, make sure you have placed medical PDF documents in `src/lib/knowledge-base/`.
--   **File Uploads**: The server is configured for a 10MB limit. Uploading larger files will result in a payload error.
--   **OS Compatibility**: On Windows, ensure you are using a terminal like PowerShell or Git Bash for the setup commands.
--   **Node Modules**: If you see "Module not found" errors, ensure you ran `npm install` in **both** the root and the `webapp` folder.
+-   **🩺 Cardiology Mode**: Detects heart-related symptoms and prioritizes emergency red flags (crushing pain, radiating pain).
+-   **🧠 Mental Health Mode**: Provides empathetic support using DSM-5-TR guidelines for anxiety, depression, and stress.
+-   **👶 Pediatrics Mode**: Adjusts guidance (fever, CPR, choking) based on the child's age.
+-   **📄 Document Analysis**: Upload PDFs (lab reports, prescriptions) for instant simplification and context.
+-   **👨‍⚕️ Specialist Search**: Recommends real-world specialists based on symptoms or location.
+
+---
+
+## ⚠️ Potential Issues & Solutions
+
+| Issue | Cause | Resolution |
+| :--- | :--- | :--- |
+| **`candidates: undefined`** | Vertex AI Safety Filters | The agent's `safetySettings` are configured to prevent blocking of sensitive medical guidance (False Positives). |
+| **`Index dimension error`** | Postgres `ivfflat` limit | We use `knowledge_embeddings_v4` with a 768-dimension model to stay under the 2000-dim limit. |
+| **`Token count exceeded`** | Large PDF batch size | `ingestPDF` in [src/lib/rag.ts](src/lib/rag.ts) is limited to 30 chunks per batch to respect the 20k token limit. |
+| **`Module not found: pdf-parse`** | Import inconsistency | Use `const { PDFParse } = require('pdf-parse');` to avoid CommonJS/ESM conflicts. |
+
+---
+
+## 🇵🇰 Safety & Localization (Pakistan-Specific)
+
+-   Includes emergency numbers for **Rescue 1122**, **Edhi 115**, and **Chippa 1021**.
+-   Directs users to major hospitals (e.g., Aga Khan Research, Indus Hospital) via mock data.
+-   **Disclaimer**: MediBot is an educational guidance tool and not a replacement for professional diagnosis or emergency services.
