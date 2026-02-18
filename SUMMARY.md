@@ -1,38 +1,76 @@
-# MediBot - Multi-Agent Healthcare Assistant
+# MediBot - Unified Healthcare Assistant
 
 ## Overview
-MediBot is a Mastra-based multi-agent system designed for:
-- Healthcare triage
-- Document explanation
-- Doctor recommendation
+MediBot is a Mastra-based unified intelligent AI healthcare assistant that seamlessly adapts to patient needs through intelligent mode switching. It handles:
+- Healthcare triage (symptom analysis)
+- Medical document explanation
+- Doctor recommendations
+- Mental health support
 
 ---
 
-## Key Components
+## Architecture
 
-### 1. Backend (Node.js + Express)
-- **Agents**:
-  - `Triage Agent`: Simulates a junior physician for initial diagnosis.
-  - `Doc Explainer Agent`: Simplifies medical reports.
-  - `Doctor Recommender Agent`: Queries a PostgreSQL database for doctor recommendations.
-- **Tools**:
-  - `searchDoctors`: Connects to PostgreSQL to find doctors by specialty or condition.
-- **Database**:
-  - PostgreSQL is used, with mock data seeded into a `doctors` table.
-- **File Uploads**:
-  - Supports uploading files (PDF, TXT, images) for processing.
-- **Scripts**:
-  - `seed.ts`: Seeds the database with mock data.
-  - `ingestKnowledgeBase.ts`: Processes and ingests knowledge base data.
+### Single Unified Agent (MediBot)
+Instead of multiple agents, MediBot uses a **single intelligent agent** that automatically detects and adapts to patient needs:
 
-### 2. Frontend (Next.js)
-- A web application for interacting with MediBot.
-- Uses **Tailwind CSS** for styling.
-- Provides a user interface for healthcare triage, document explanation, and doctor search.
+- **Triage Mode**: Activated when patient describes symptoms, pain, or illness
+- **Document Explanation Mode**: Activated for lab results, medical reports, X-rays
+- **Doctor Recommendation Mode**: Activated when patient asks for healthcare providers
+- **Mental Health Support Mode**: Activated for anxiety, depression, stress concerns
 
-### 3. CLI Interface
-- A simple command-line interface for interacting with the agents.
-- Allows users to select modes (e.g., triage, document explanation, doctor search) and interact with agents.
+The agent intelligently switches modes based on the patient's queries through its system prompt.
+
+### Memory System
+MediBot implements a comprehensive memory system using `@mastra/memory`:
+
+#### Short-term Memory
+- Maintains last 20 messages of conversation context
+- Provides immediate conversation continuity
+
+#### Working Memory
+- Extracts and maintains patient profile information:
+  - Demographics (name, age, location)
+  - Medical history (conditions, allergies, medications)
+  - Current concerns (symptoms, duration, severity)
+  - Preferences (specialty, insurance, communication)
+  - Session notes (findings, recommendations, follow-ups)
+
+### Storage
+- PostgreSQL-backed storage using `@mastra/pg` (`PostgresStore`)
+- Automatically handles memory persistence at the Mastra instance level
+- Shared across all agents for consistency
+
+### Tools
+- **search-doctors**: Query PostgreSQL database for healthcare providers by specialty or condition
+- **knowledge-search**: Access medical knowledge base (DSM-5, clinical guidelines) via RAG
+
+---
+
+## Components
+
+### Backend (Node.js + Express)
+- **Unified Agent**: Single `mediBotAgent` handles all interactions
+- **Memory**: Agent-level memory configuration with working memory enabled
+- **Storage**: Instance-level PostgreSQL storage for persistence
+- **File Processing**: Supports PDF, TXT, and image uploads for document analysis
+- **RAG**: Vector-based knowledge retrieval using PgVector
+
+### Frontend (Next.js)
+- Modern UI built with Tailwind CSS
+- Real-time chat interface with file upload support
+- Session-based conversation management
+
+---
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/chat` | POST | Send message to MediBot (with memory via thread/resource) |
+| `/chat/upload` | POST | Upload and analyze medical documents |
+| `/kb/stats` | GET | Knowledge base statistics |
+| `/health` | GET | Health check endpoint |
 
 ---
 
@@ -44,44 +82,46 @@ npm install
 ```
 
 ### 2. Environment Variables
-Create a `.env` file with:
+Create a `.env` file:
 ```
 GOOGLE_GENERATIVES_AI_API_KEY=your_key_here
 POSTGRES_CONNECTION_STRING=postgresql://user:password@localhost:5432/medibot
 ```
 
 ### 3. Database Setup
-- Ensure PostgreSQL is running.
-- Seed the database:
 ```bash
 npm run seed
 ```
 
-### 4. Run the Application
-- Start the development server:
+### 4. Ingest Knowledge Base
+```bash
+npm run ingest-kb
+```
+
+### 5. Run the Application
 ```bash
 npm run dev
 ```
 
 ---
 
-## Future Enhancements
-- Integrate `@mastra/memory` for persistent long-term storage of patient history.
+## Recent Changes
 
----
+### v2.0.0 - Unified Agent Architecture
+- **Removed**: CLI Interface (`src/index.ts`)
+- **Removed**: Multi-agent architecture (routing agent, separate triage/explainer/recommender agents)
+- **Removed**: Old agent files (`triageAgent.ts`, `docExplainerAgent.ts`, `doctorRecommenderAgent.ts`, `routingAgent.ts`)
+- **Added**: Single unified `mediBotAgent` with intelligent mode switching
+- **Added**: Agent-level memory with working memory for patient profile tracking
+- **Added**: Instance-level PostgreSQL storage (`@mastra/pg` with `PostgresStore`)
+- **Updated**: Server endpoints for seamless frontend integration with Mastra memory API
+- **Added**: Health check endpoint
+- **Simplified**: Server code by utilizing Mastra's built-in memory handling
 
-## To-Do
-
-### Backend
-- Ensure the database schema is finalized and optimized.
-- Test and refine the agents' logic.
-- Add error handling for file uploads and agent interactions.
-
-### Frontend
-- Build and refine the user interface for all agent functionalities.
-- Ensure seamless integration with the backend.
-
-### General
-- Add unit and integration tests.
-- Document the API endpoints and agent workflows.
-- Deploy the application (e.g., using Vercel for the frontend and a cloud provider for the backend).
+### Key Benefits
+1. **Simplified Architecture**: One agent instead of four
+2. **Intelligent Context**: Agent maintains patient information across conversations
+3. **Seamless Transitions**: No explicit mode selection needed
+4. **Persistent Memory**: Conversations and patient data stored in PostgreSQL via Mastra
+5. **Better UX**: Natural conversation flow without interruptions
+6. **Mastra-Aligned**: Follows Mastra framework patterns and best practices

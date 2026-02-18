@@ -1,7 +1,7 @@
 import { MDocument } from '@mastra/rag';
 import { PgVector } from "@mastra/pg";
 import { embedMany } from "ai";
-import { google } from '@ai-sdk/google';
+import { vertex } from '@ai-sdk/google-vertex';
 import path from 'path';
 import fs from 'fs';
 
@@ -15,8 +15,8 @@ const vectorStore = new PgVector({
   connectionString: process.env.POSTGRES_CONNECTION_STRING!,
 });
 
-const INDEX_NAME = 'knowledge_embeddings';
-const EMBEDDING_DIMENSION = 768; // Matches Gemini's text-embedding-004
+const INDEX_NAME = 'knowledge_embeddings_v4';
+const EMBEDDING_DIMENSION = 768; // Matches Vertex text-embedding-004
 
 // 2. Optimized Ingestion (The Mastra Way)
 export async function ingestPDF(filePath: string, source: string) {
@@ -55,8 +55,8 @@ export async function ingestPDF(filePath: string, source: string) {
 
   console.log(`📊 Processing ${chunks.length} chunks in batches...`);
 
-  // Process embeddings in batches of 100 (Google API limit)
-  const BATCH_SIZE = 100;
+  // Process embeddings in smaller batches to stay under Vertex AI's token limits (20k tokens/request)
+  const BATCH_SIZE = 30;
   const allEmbeddings: number[][] = [];
   
   for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
@@ -64,7 +64,7 @@ export async function ingestPDF(filePath: string, source: string) {
     console.log(`  Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(chunks.length / BATCH_SIZE)}...`);
     
     const { embeddings } = await embedMany({
-      model: google.textEmbeddingModel('text-embedding-004'),
+      model: vertex.textEmbeddingModel('text-embedding-004'),
       values: batchChunks.map((chunk) => chunk.text),
     });
     
@@ -90,7 +90,7 @@ export async function ingestPDF(filePath: string, source: string) {
 export async function retrieveKnowledge(query: string, topK: number = 5, sourceFilter?: string) {
   // Generate embedding for the query
   const { embeddings } = await embedMany({
-    model: google.textEmbeddingModel('text-embedding-004'),
+    model: vertex.textEmbeddingModel('text-embedding-004'),
     values: [query],
   });
 

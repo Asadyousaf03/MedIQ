@@ -1,14 +1,13 @@
 import { Mastra } from '@mastra/core';
-import { triageAgent } from './agents/triageAgent';
-import { docExplainerAgent } from './agents/docExplainerAgent';
-import { doctorRecommenderAgent } from './agents/doctorRecommenderAgent';
-import { routingAgent } from './agents/routingAgent';
+import { PostgresStore } from '@mastra/pg';
+import { mediBotAgent } from './agents/mediBotAgent';
 
 export const mastra = new Mastra({
   agents: {
-    routingAgent,
-    triageAgent,
-    docExplainerAgent,
-    doctorRecommenderAgent
-  }
+    mediBotAgent,
+  },
+  storage: new PostgresStore({
+    id: 'medibot-storage',
+    connectionString: process.env.POSTGRES_CONNECTION_STRING!,
+  }),
 });

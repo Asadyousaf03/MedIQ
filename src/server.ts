@@ -48,40 +48,38 @@ const upload = multer({
   }
 });
 
-// In-memory session store for demo purposes. 
-// For production, use a persistent store like Redis.
-const sessions: Record<string, Array<{role: string, content: string}>> = {};
+// Get the unified MediBot agent
+const getMediBotAgent = () => mastra.getAgent('mediBotAgent') as Agent<any, any>;
 
-app.post('/chat', async (req:any, res:any) => {
-    const { message, sessionId } = req.body;
+// Chat endpoint with memory integration
+app.post('/chat', async (req: any, res: any) => {
+    const { message, sessionId, resourceId } = req.body;
 
     if (!message || !sessionId) {
         return res.status(400).json({ error: 'message and sessionId are required' });
     }
 
-    // Use the routing agent to handle all requests
-    const agent = mastra.getAgent('routingAgent') as Agent<any, any>;
+    const agent = getMediBotAgent();
 
     if (!agent) {
-        return res.status(500).json({ error: 'Routing agent not available' });
+        return res.status(500).json({ error: 'MediBot agent not available' });
     }
-
-    // Retrieve or create session history
-    if (!sessions[sessionId]) {
-        sessions[sessionId] = [];
-    }
-    const history = sessions[sessionId];
-    history.push({ role: 'user', content: message });
 
     try {
-        const contextPrompt = history.map(m => `${m.role}: ${m.content}`).join('\n');
-        const response = await agent.generate(contextPrompt);
-        const responseText = response?.text || "I'm having trouble thinking right now.";
+        // Use memory with thread and resource for conversation continuity
+        const response = await agent.generate(message, {
+            memory: {
+                thread: sessionId,
+                resource: resourceId || sessionId, // Fall back to sessionId if no resourceId
+            },
+        });
 
-        // Save assistant response to history
-        history.push({ role: 'assistant', content: responseText });
+        const responseText = response?.text || "I'm having trouble processing your request right now.";
 
-        res.json({ response: responseText });
+        res.json({ 
+            response: responseText,
+            threadId: sessionId,
+        });
     } catch (error) {
         console.error(`Error processing request:`, error);
         res.status(500).json({ error: 'Internal server error' });
@@ -90,7 +88,7 @@ app.post('/chat', async (req:any, res:any) => {
 
 // File upload endpoint for lab reports and documents
 app.post('/chat/upload', upload.single('file'), async (req: any, res: any) => {
-    const { sessionId, message } = req.body;
+    const { sessionId, message, resourceId } = req.body;
     const file = req.file;
 
     if (!sessionId) {
@@ -117,37 +115,34 @@ app.post('/chat/upload', upload.single('file'), async (req: any, res: any) => {
             extractedText = `[Image uploaded: ${file.originalname}. This appears to be a medical image/scan that requires visual analysis.]`;
         }
 
-        // Get or create session
-        if (!sessions[sessionId]) {
-            sessions[sessionId] = [];
-        }
-        const history = sessions[sessionId];
-
         // Create context with file content
         const userMessage = message 
             ? `${message}\n\nUploaded document (${file.originalname}):\n${extractedText.slice(0, 5000)}` 
             : `Please analyze this uploaded document (${file.originalname}):\n${extractedText.slice(0, 5000)}`;
 
-        history.push({ role: 'user', content: userMessage });
-
-        // Use docExplainer agent for document analysis
-        const agent = mastra.getAgent('docExplainerAgent') as Agent<any, any>;
+        // Use the unified MediBot agent with memory
+        const agent = getMediBotAgent();
 
         if (!agent) {
-            return res.status(500).json({ error: 'Document explainer agent not available' });
+            return res.status(500).json({ error: 'MediBot agent not available' });
         }
 
-        const contextPrompt = history.map(m => `${m.role}: ${m.content}`).join('\n');
-        const response = await agent.generate(contextPrompt);
+        // Generate response with memory context
+        const response = await agent.generate(userMessage, {
+            memory: {
+                thread: sessionId,
+                resource: resourceId || sessionId,
+            },
+        });
+        
         const responseText = response?.text || "I'm having trouble analyzing this document.";
-
-        history.push({ role: 'assistant', content: responseText });
 
         // Clean up uploaded file after processing
         fs.unlinkSync(file.path);
 
         res.json({ 
             response: responseText,
+            threadId: sessionId,
             fileProcessed: {
                 name: file.originalname,
                 type: ext,
@@ -175,6 +170,19 @@ app.get('/kb/stats', async (req: any, res: any) => {
     }
 });
 
+// Health check endpoint
+app.get('/health', (req: any, res: any) => {
+    res.json({ 
+        status: 'healthy',
+        service: 'MediBot',
+        version: '2.0.0',
+        timestamp: new Date().toISOString(),
+    });
+});
+
 app.listen(port, () => {
-    console.log(`MediBot server listening on port ${port}`);
+    console.log(`🏥 MediBot Healthcare Assistant server listening on port ${port}`);
+    console.log(`   - Chat endpoint: POST /chat`);
+    console.log(`   - File upload: POST /chat/upload`);
+    console.log(`   - Health check: GET /health`);
 });
