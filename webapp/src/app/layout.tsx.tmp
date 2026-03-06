@@ -1,0 +1,14 @@
+import {
+  ClerkProvider,
+  SignInButton,
+  SignedIn,
+  SignedOut,
+  UserButton
+} from '@clerk/nextjs'
+
+export const metadata = {
+  title: 'MedIQ',
+  description: 'AI Medical Assistant and Health Portal',
+};
+
+// ... Wait, let me read the original layout to not overwrite its styles
