@@ -2,10 +2,11 @@
 
 import { useState, FormEvent, useRef, useEffect, ChangeEvent } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { bookAppointment } from '@/app/actions';
 
 interface Message {
   id: string;
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'system';
   text: string;
   timestamp: Date;
   file?: {
@@ -142,6 +143,27 @@ export default function ChatInterface() {
     });
   };
 
+  const handleBookAppointment = async (doctorId: number, doctorName: string) => {
+    if(!window.confirm(`Do you want to book an appointment with ${doctorName} for tomorrow at 10 AM?`)) return;
+
+    try {
+      const result = await bookAppointment(doctorId, "Referral from AI Chat");
+      if (result.success) {
+        setMessages(prev => [...prev, {
+          id: uuidv4(),
+          role: 'system', 
+          text: `✅ ${result.message}`,
+          timestamp: new Date()
+        }]);
+      } else {
+        alert(result.message);
+      }
+    } catch (error) {
+       console.error(error);
+       alert("Failed to book appointment.");
+    }
+  };
+
   const quickActions = [
     { label: '🩺 Check symptoms', prompt: 'I want to describe my symptoms' },
     { label: '📋 Explain lab results', prompt: 'Can you help me understand my lab results?' },
@@ -194,13 +216,54 @@ export default function ChatInterface() {
       {/* Messages */}
       <main className="flex-1 overflow-y-auto px-4 py-6">
         <div className="max-w-4xl mx-auto space-y-4">
-          {messages.map((msg) => (
+          {messages.map((msg) => {
+             // System message styling
+             if (msg.role === 'system') {
+               return (
+                 <div key={msg.id} className="flex justify-center animate-fade-in my-2">
+                   <span className="px-3 py-1 bg-green-900/40 text-green-400 text-xs rounded-full border border-green-800/50">
+                     {msg.text}
+                   </span>
+                 </div>
+               );
+             }
+
+             const parts = [];
+             const regex = /\[BOOK_APPOINTMENT:(.*?)\]/g;
+             let lastIndex = 0;
+             let match;
+             const text = msg.text || '';
+
+             while ((match = regex.exec(text)) !== null) {
+               if (match.index > lastIndex) {
+                 parts.push(<span key={lastIndex}>{text.substring(lastIndex, match.index)}</span>);
+               }
+               try {
+                 const data = JSON.parse(match[1]);
+                 parts.push(
+                   <button
+                     key={match.index}
+                     onClick={() => handleBookAppointment(data.id, data.name)}
+                     className="mt-2 block w-full text-center px-4 py-2 border border-green-500/30 text-sm font-medium rounded-lg text-green-300 bg-green-900/30 hover:bg-green-900/50 transition-colors"
+                   >
+                     📅 Book Appointment with {data.name}
+                   </button>
+                 );
+               } catch (e) {
+                 console.error(e);
+               }
+               lastIndex = regex.lastIndex;
+             }
+             if (lastIndex < text.length) {
+               parts.push(<span key={lastIndex}>{text.substring(lastIndex)}</span>);
+             }
+
+             return (
             <div 
               key={msg.id} 
               className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
             >
               <div className={`flex items-start gap-3 max-w-[85%] sm:max-w-[75%] ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                {/* Avatar */}
                 <div className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center shadow-lg ${
                   msg.role === 'user' 
                     ? 'bg-gradient-to-br from-orange-400 to-pink-600' 
@@ -209,7 +272,6 @@ export default function ChatInterface() {
                   <span className="text-lg">{msg.role === 'user' ? '👤' : '🤖'}</span>
                 </div>
                 
-                {/* Message */}
                 <div className="flex flex-col space-y-1">
                   <div className={`px-4 py-3 rounded-2xl shadow-lg ${
                     msg.role === 'user'
@@ -222,7 +284,9 @@ export default function ChatInterface() {
                         <span className="text-sm opacity-80">{msg.file.name}</span>
                       </div>
                     )}
-                    <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                    <div className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
+                        {parts.length > 0 ? parts : text}
+                    </div>
                   </div>
                   <span className={`text-xs text-slate-500 px-2 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
                     {formatTime(msg.timestamp)}
@@ -230,7 +294,8 @@ export default function ChatInterface() {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
           
           {/* Loading */}
           {isLoading && (

@@ -11,6 +11,7 @@ export const searchDoctorsTool = createTool({
     }),
     outputSchema: z.object({
         doctors: z.array(z.object({
+            id: z.number(),
             name: z.string(),
             specialty: z.string(),
             hospital: z.string(),

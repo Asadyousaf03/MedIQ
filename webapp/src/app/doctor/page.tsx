@@ -1,8 +1,35 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { UserButton } from '@clerk/nextjs';
-import { Activity, Users, Calendar, Settings } from 'lucide-react';
+import { Activity, Users, Calendar, Settings, Clock, CheckCircle, XCircle } from 'lucide-react';
 import Link from 'next/link';
+import { query, Appointment } from '@/lib/db';
+
+// Force dynamic rendering to ensure fresh data
+export const dynamic = 'force-dynamic';
+
+async function getAppointments(doctorId: number) {
+  try {
+    const res = await query(
+      `SELECT * FROM appointments 
+       WHERE doctor_id = $1 
+       ORDER BY appointment_time ASC`,
+      [doctorId]
+    );
+    return res.rows as Appointment[];
+  } catch (error) {
+    console.error('Failed to fetch appointments:', error);
+    return [];
+  }
+}
+
+async function getDoctorId(clerkId: string): Promise<number | null> {
+    // For now, return the first doctor ID for demo purposes if not found, 
+    // or map Clerk ID to doctor table. 
+    // In a real app, you'd match the Clerk userId to a 'clerk_id' column in doctors table.
+    // Here we'll just pick ID 1 (Dr. Sarah Plain) for testing.
+    return 1; 
+}
 
 export default async function DoctorDashboard() {
   const session = await auth();
@@ -12,8 +39,19 @@ export default async function DoctorDashboard() {
     redirect('/sign-in');
   }
 
-  // TODO: Add strict role check here (e.g., const isDoctor = session.sessionClaims?.metadata.role === 'doctor')
+  const doctorId = await getDoctorId(session.userId);
+  const appointments = doctorId ? await getAppointments(doctorId) : [];
   
+  const pendingAppointments = appointments.filter(a => a.status === 'pending');
+  const todayAppointments = appointments.filter(a => {
+      const today = new Date();
+      const apptDate = new Date(a.appointment_time);
+      return apptDate.getDate() === today.getDate() && 
+             apptDate.getMonth() === today.getMonth() && 
+             apptDate.getFullYear() === today.getFullYear();
+  });
+
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Navbar */}
@@ -50,7 +88,7 @@ export default async function DoctorDashboard() {
                     <dl>
                       <dt className="text-sm font-medium text-gray-500 truncate">Today's Appointments</dt>
                       <dd className="flex items-baseline">
-                        <div className="text-2xl font-semibold text-gray-900">3</div>
+                        <div className="text-2xl font-semibold text-gray-900">{todayAppointments.length}</div>
                       </dd>
                     </dl>
                   </div>
@@ -58,7 +96,7 @@ export default async function DoctorDashboard() {
               </div>
               <div className="bg-gray-50 px-5 py-3">
                 <div className="text-sm">
-                  <a href="#" className="font-medium text-blue-600 hover:text-blue-500">View schedule</a>
+                  <span className="font-medium text-blue-600 hover:text-blue-500">View schedule</span>
                 </div>
               </div>
             </div>
@@ -71,9 +109,9 @@ export default async function DoctorDashboard() {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">Live Queue (Urgent)</dt>
+                      <dt className="text-sm font-medium text-gray-500 truncate">Pending Requests</dt>
                       <dd className="flex items-baseline">
-                        <div className="text-2xl font-semibold text-red-600">1</div>
+                        <div className={`text-2xl font-semibold ${pendingAppointments.length > 0 ? 'text-red-600' : 'text-gray-900'}`}>{pendingAppointments.length}</div>
                       </dd>
                     </dl>
                   </div>
@@ -81,7 +119,7 @@ export default async function DoctorDashboard() {
               </div>
               <div className="bg-gray-50 px-5 py-3">
                 <div className="text-sm">
-                  <a href="#" className="font-medium text-blue-600 hover:text-blue-500">View waiting room</a>
+                  <span className="font-medium text-blue-600 hover:text-blue-500">View waiting room</span>
                 </div>
               </div>
             </div>
@@ -98,6 +136,64 @@ export default async function DoctorDashboard() {
                     </dl>
                   </div>
                 </div>
+              </div>
+               <div className="bg-gray-50 px-5 py-3">
+                <div className="text-sm">
+                 <span className="font-medium text-gray-500">Manage availability</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <h2 className="mt-8 text-xl font-bold text-gray-900">Recent Appointments</h2>
+          <div className="mt-4 bg-white shadow overflow-hidden sm:rounded-md">
+            <ul className="divide-y divide-gray-200">
+              {appointments.length === 0 ? (
+                 <li className="px-4 py-4 sm:px-6 text-gray-500 text-center">No appointments found.</li>
+              ) : (
+                appointments.map((appointment) => (
+                  <li key={appointment.id}>
+                    <div className="px-4 py-4 sm:px-6 hover:bg-gray-50 transition duration-150 ease-in-out cursor-pointer">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm leading-5 font-medium text-blue-600 truncate">
+                          {appointment.patient_name || 'Anonymous Patient'}
+                        </div>
+                        <div className="ml-2 flex-shrink-0 flex">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            appointment.status === 'confirmed' ? 'bg-green-100 text-green-800' : 
+                            appointment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {appointment.status}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="mt-2 sm:flex sm:justify-between">
+                        <div className="sm:flex">
+                          <div className="mr-6 flex items-center text-sm leading-5 text-gray-500">
+                            <Clock className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" />
+                            {new Date(appointment.appointment_time).toLocaleString()}
+                          </div>
+                          <div className="mt-2 flex items-center text-sm leading-5 text-gray-500 sm:mt-0">
+                            <Activity className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" />
+                            {appointment.reason}
+                          </div>
+                        </div>
+                        <div className="mt-2 flex items-center text-sm leading-5 text-gray-500 sm:mt-0">
+                             {/* Actions can go here in V2 */}
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                ))
+              )}
+            </ul>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
               </div>
               <div className="bg-gray-50 px-5 py-3">
                 <div className="text-sm">

@@ -17,12 +17,38 @@ async function seed() {
         specialty VARCHAR(255) NOT NULL,
         hospital VARCHAR(255) NOT NULL,
         experience INT,
-        bio TEXT
+        bio TEXT,
+        availability JSONB DEFAULT '{"days": ["Mon", "Wed", "Fri"], "hours": "9:00-17:00"}'
+      );
+    `);
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS appointments (
+        id SERIAL PRIMARY KEY,
+        doctor_id INT REFERENCES doctors(id),
+        patient_id VARCHAR(255) NOT NULL,
+        patient_name VARCHAR(255),
+        status VARCHAR(50) DEFAULT 'pending',
+        appointment_time TIMESTAMP NOT NULL,
+        reason TEXT,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS medical_records (
+        id SERIAL PRIMARY KEY,
+        patient_id VARCHAR(255) NOT NULL,
+        symptoms TEXT,
+        diagnosis_suspected TEXT,
+        recommended_specialty VARCHAR(255),
+        created_at TIMESTAMP DEFAULT NOW()
       );
     `);
 
     // Clear existing data
-    await query('TRUNCATE doctors RESTART IDENTITY');
+    await query('TRUNCATE appointments, medical_records, doctors RESTART IDENTITY');
 
     const doctors = [
       { name: "Dr. Sarah Plain", specialty: "General Practitioner", hospital: "City General", experience: 5, bio: "Empathetic GP with a focus on preventative care." },
@@ -38,10 +64,23 @@ async function seed() {
     ];
 
     for (const doc of doctors) {
-      await query(
-        'INSERT INTO doctors (name, specialty, hospital, experience, bio) VALUES ($1, $2, $3, $4, $5)',
+      const res = await query(
+        'INSERT INTO doctors (name, specialty, hospital, experience, bio) VALUES ($1, $2, $3, $4, $5) RETURNING id',
         [doc.name, doc.specialty, doc.hospital, doc.experience, doc.bio]
       );
+      const doctorId = res.rows[0].id;
+      
+      // Seed some sample appointments for the first few doctors
+      if (['General Practitioner', 'Internal Medicine'].includes(doc.specialty)) {
+         const tomorrow = new Date();
+         tomorrow.setDate(tomorrow.getDate() + 1);
+         tomorrow.setHours(10, 0, 0, 0);
+         
+         await query(
+            'INSERT INTO appointments (doctor_id, patient_id, patient_name, status, appointment_time, reason) VALUES ($1, $2, $3, $4, $5, $6)',
+            [doctorId, 'user_mock_123', 'John Doe', 'pending', tomorrow, 'Persistent cough and fever']
+         );
+      }
     }
 
     console.log('Seeding completed successfully.');
