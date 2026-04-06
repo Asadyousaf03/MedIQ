@@ -1,14 +1,21 @@
-import { auth } from '@clerk/nextjs/server';
-import { redirect } from 'next/navigation';
-import { UserButton } from '@clerk/nextjs';
+import Link from 'next/link';
 import { Shield, BrainCircuit, Activity } from 'lucide-react';
+import { requireRole } from '@/lib/auth';
 
 export default async function AdminDashboard() {
-  const session = await auth();
-  
-  if (!session.userId) {
-    redirect('/sign-in');
-  }
+  await requireRole(['admin']);
+
+  const knowledgeBaseStatus = [
+    { name: 'Diabetes Management Guidelines', version: 'v2.3', status: 'Synced', lastSync: '2h ago' },
+    { name: 'Emergency First Aid Playbook', version: 'v1.9', status: 'Syncing', lastSync: 'In progress' },
+    { name: 'Mental Health Triage Protocol', version: 'v1.4', status: 'Synced', lastSync: 'Yesterday' },
+  ];
+
+  const roleQueue = [
+    { user: 'patient@mediq.local', requestedRole: 'patient', state: 'Approved' },
+    { user: 'newdoctor@mediq.local', requestedRole: 'doctor', state: 'Pending review' },
+    { user: 'ops@mediq.local', requestedRole: 'admin', state: 'Requires verification' },
+  ];
 
   return (
     <div className="min-h-screen bg-slate-900 text-white flex flex-col">
@@ -21,7 +28,7 @@ export default async function AdminDashboard() {
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-slate-400">System Status: <span className="text-green-400">Online</span></span>
-              <UserButton appearance={{ elements: { userButtonAvatarBox: "border-2 border-indigo-400" } }}/>
+              <Link href="/sign-out" className="text-sm font-medium text-indigo-300 hover:text-indigo-200">Sign out</Link>
             </div>
           </div>
         </div>
@@ -37,7 +44,7 @@ export default async function AdminDashboard() {
               <h2 className="text-xl font-semibold">AI Models & Agents</h2>
             </div>
             <p className="text-slate-400 text-sm mb-4">Manage knowledge bases, agent prompt guidelines, and sync state.</p>
-            <button className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm transition">Configure Knowledge Base</button>
+            <a href="#knowledge-base" className="inline-block bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm transition">Configure Knowledge Base</a>
           </div>
 
           <div className="bg-slate-800 p-6 rounded-xl border border-slate-700">
@@ -46,9 +53,50 @@ export default async function AdminDashboard() {
               <h2 className="text-xl font-semibold">Access Portals</h2>
             </div>
             <p className="text-slate-400 text-sm mb-4">Manage Doctor provisioning, approve new signups, and monitor roles.</p>
-            <button className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm transition">Manage Users & Roles</button>
+            <a href="#user-roles" className="inline-block bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm transition">Manage Users & Roles</a>
           </div>
         </div>
+
+        <section id="knowledge-base" className="mt-8 rounded-xl border border-slate-700 bg-slate-800 p-6">
+          <h2 className="text-xl font-semibold text-white">Knowledge Base Sync Status</h2>
+          <p className="mt-2 text-sm text-slate-400">Operational placeholder data for admin workflows until live indexing telemetry is connected.</p>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[560px] text-left text-sm">
+              <thead className="text-xs uppercase tracking-wide text-slate-400">
+                <tr>
+                  <th className="pb-2">Dataset</th>
+                  <th className="pb-2">Version</th>
+                  <th className="pb-2">Status</th>
+                  <th className="pb-2">Last Sync</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-700 text-slate-200">
+                {knowledgeBaseStatus.map((item) => (
+                  <tr key={item.name}>
+                    <td className="py-3">{item.name}</td>
+                    <td className="py-3">{item.version}</td>
+                    <td className="py-3">{item.status}</td>
+                    <td className="py-3">{item.lastSync}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="user-roles" className="mt-8 rounded-xl border border-slate-700 bg-slate-800 p-6">
+          <h2 className="text-xl font-semibold text-white">User & Role Queue</h2>
+          <p className="mt-2 text-sm text-slate-400">Role onboarding pipeline with dummy records for a complete admin flow.</p>
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+            {roleQueue.map((item) => (
+              <div key={item.user} className="rounded-lg border border-slate-700 bg-slate-900 p-4">
+                <p className="text-sm font-medium text-white">{item.user}</p>
+                <p className="mt-1 text-xs text-slate-400">Requested: {item.requestedRole}</p>
+                <p className="mt-3 inline-block rounded-full bg-indigo-500/20 px-2 py-1 text-xs font-medium text-indigo-300">{item.state}</p>
+              </div>
+            ))}
+          </div>
+        </section>
       </main>
     </div>
   );

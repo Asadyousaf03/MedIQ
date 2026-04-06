@@ -1,13 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { getSessionCookieName, verifySessionToken, type AuthRole } from '@/lib/session';
 
-const isProtectedRoute = createRouteMatcher(['/admin(.*)', '/doctor(.*)']);
+const protectedRoutes: Array<{ pattern: RegExp; roles: AuthRole[] }> = [
+  { pattern: /^\/admin(?:\/.*)?$/, roles: ['admin'] },
+  { pattern: /^\/doctor(?:\/.*)?$/, roles: ['doctor'] },
+  { pattern: /^\/patient(?:\/.*)?$/, roles: ['patient', 'doctor', 'admin'] },
+];
 
-export default clerkMiddleware((auth, req: NextRequest) => {
-  if (isProtectedRoute(req)) {
-    auth.protect();
+export default async function middleware(request: NextRequest) {
+  const matchingRoute = protectedRoutes.find((route) => route.pattern.test(request.nextUrl.pathname));
+
+  if (!matchingRoute) {
+    return NextResponse.next();
   }
-});
+
+  const sessionToken = request.cookies.get(getSessionCookieName())?.value;
+  const session = await verifySessionToken(sessionToken);
+
+  if (!session) {
+    const signInUrl = new URL('/sign-in', request.url);
+    signInUrl.searchParams.set('error', 'Please sign in to continue');
+    return NextResponse.redirect(signInUrl);
+  }
+
+  if (!matchingRoute.roles.includes(session.role as AuthRole)) {
+    return NextResponse.redirect(new URL('/', request.url));
+  }
+
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: [

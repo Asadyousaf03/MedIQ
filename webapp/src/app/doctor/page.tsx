@@ -1,9 +1,7 @@
-import { auth } from '@clerk/nextjs/server';
-import { redirect } from 'next/navigation';
-import { UserButton } from '@clerk/nextjs';
-import { Activity, Users, Calendar, Settings, Clock, CheckCircle, XCircle } from 'lucide-react';
 import Link from 'next/link';
+import { Activity, Users, Calendar, Settings, Clock } from 'lucide-react';
 import { query, Appointment } from '@/lib/db';
+import { requireRole } from '@/lib/auth';
 
 // Force dynamic rendering to ensure fresh data
 export const dynamic = 'force-dynamic';
@@ -23,23 +21,16 @@ async function getAppointments(doctorId: number) {
   }
 }
 
-async function getDoctorId(clerkId: string): Promise<number | null> {
-    // For now, return the first doctor ID for demo purposes if not found, 
-    // or map Clerk ID to doctor table. 
-    // In a real app, you'd match the Clerk userId to a 'clerk_id' column in doctors table.
-    // Here we'll just pick ID 1 (Dr. Sarah Plain) for testing.
-    return 1; 
+async function getDoctorId(): Promise<number | null> {
+    // Demo mapping: one local doctor account maps to doctor record 1.
+    // Extend this later by adding a doctor_id column to the users table.
+    return 1;
 }
 
 export default async function DoctorDashboard() {
-  const session = await auth();
-  
-  // Basic check for authenticated state
-  if (!session.userId) {
-    redirect('/sign-in');
-  }
+  const currentUser = await requireRole(['doctor']);
 
-  const doctorId = await getDoctorId(session.userId);
+  const doctorId = await getDoctorId();
   const appointments = doctorId ? await getAppointments(doctorId) : [];
   
   const pendingAppointments = appointments.filter(a => a.status === 'pending');
@@ -65,7 +56,7 @@ export default async function DoctorDashboard() {
               </div>
             </div>
             <div className="flex items-center">
-              <UserButton />
+              <Link href="/sign-out" className="rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200">Sign out</Link>
             </div>
           </div>
         </div>
@@ -96,7 +87,7 @@ export default async function DoctorDashboard() {
               </div>
               <div className="bg-gray-50 px-5 py-3">
                 <div className="text-sm">
-                  <span className="font-medium text-blue-600 hover:text-blue-500">View schedule</span>
+                  <a href="#schedule" className="font-medium text-blue-600 hover:text-blue-500">View schedule</a>
                 </div>
               </div>
             </div>
@@ -119,7 +110,7 @@ export default async function DoctorDashboard() {
               </div>
               <div className="bg-gray-50 px-5 py-3">
                 <div className="text-sm">
-                  <span className="font-medium text-blue-600 hover:text-blue-500">View waiting room</span>
+                  <a href="#waiting-room" className="font-medium text-blue-600 hover:text-blue-500">View waiting room</a>
                 </div>
               </div>
             </div>
@@ -139,13 +130,13 @@ export default async function DoctorDashboard() {
               </div>
                <div className="bg-gray-50 px-5 py-3">
                 <div className="text-sm">
-                 <span className="font-medium text-gray-500">Manage availability</span>
+                 <a href="#availability" className="font-medium text-gray-600 hover:text-gray-700">Manage availability</a>
                 </div>
               </div>
             </div>
           </div>
 
-          <h2 className="mt-8 text-xl font-bold text-gray-900">Recent Appointments</h2>
+          <h2 id="schedule" className="mt-8 text-xl font-bold text-gray-900">Recent Appointments</h2>
           <div className="mt-4 bg-white shadow overflow-hidden sm:rounded-md">
             <ul className="divide-y divide-gray-200">
               {appointments.length === 0 ? (
@@ -189,19 +180,60 @@ export default async function DoctorDashboard() {
               )}
             </ul>
           </div>
-        </div>
-      </main>
-    </div>
-  );
-}
+
+          <section id="waiting-room" className="mt-8 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+            <h3 className="text-lg font-semibold text-gray-900">Waiting Room Overview</h3>
+            <p className="mt-2 text-sm text-gray-600">Patients with pending requests are highlighted here so your team can prioritize callbacks and confirmations.</p>
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="rounded-md bg-yellow-50 p-4">
+                <p className="text-xs uppercase tracking-wide text-yellow-700">Pending confirmations</p>
+                <p className="mt-1 text-2xl font-bold text-yellow-900">{pendingAppointments.length}</p>
               </div>
-              <div className="bg-gray-50 px-5 py-3">
-                <div className="text-sm">
-                  <a href="#" className="font-medium text-blue-600 hover:text-blue-500">Update availability</a>
-                </div>
+              <div className="rounded-md bg-emerald-50 p-4">
+                <p className="text-xs uppercase tracking-wide text-emerald-700">Confirmed today</p>
+                <p className="mt-1 text-2xl font-bold text-emerald-900">
+                  {todayAppointments.filter((appointment) => appointment.status === 'confirmed').length}
+                </p>
               </div>
             </div>
-          </div>
+          </section>
+
+          <section id="availability" className="mt-8 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+            <h3 className="text-lg font-semibold text-gray-900">Availability Template</h3>
+            <p className="mt-2 text-sm text-gray-600">Dummy schedule shown until personalized provider settings are connected.</p>
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full min-w-[480px] text-left text-sm">
+                <thead className="text-xs uppercase tracking-wide text-gray-500">
+                  <tr>
+                    <th className="pb-2">Day</th>
+                    <th className="pb-2">Morning</th>
+                    <th className="pb-2">Afternoon</th>
+                    <th className="pb-2">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 text-gray-700">
+                  <tr>
+                    <td className="py-2">Monday</td>
+                    <td className="py-2">09:00 - 12:00</td>
+                    <td className="py-2">14:00 - 17:00</td>
+                    <td className="py-2"><span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700">Open</span></td>
+                  </tr>
+                  <tr>
+                    <td className="py-2">Wednesday</td>
+                    <td className="py-2">10:00 - 12:30</td>
+                    <td className="py-2">15:00 - 18:00</td>
+                    <td className="py-2"><span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700">Open</span></td>
+                  </tr>
+                  <tr>
+                    <td className="py-2">Friday</td>
+                    <td className="py-2">09:30 - 11:30</td>
+                    <td className="py-2">--</td>
+                    <td className="py-2"><span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700">Limited</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
         </div>
       </main>
     </div>

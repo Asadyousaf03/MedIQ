@@ -1,18 +1,17 @@
-import { Agent } from '@mastra/core/agent';
-import { Memory } from '@mastra/memory';
-import { vertex } from '@ai-sdk/google-vertex';
-import { searchDoctorsTool } from '../tools/doctorSearch';
-import { knowledgeSearchTool } from '../tools/knowledgeSearch';
-
-// Configure memory with short-term and working memory
-const mediBotMemory = new Memory({
-  options: {
-    // Short-term: Recent conversation context (last 20 messages)
-    lastMessages: 20,
-    // Working memory: Extracted facts about the patient
-    workingMemory: {
-      enabled: true,
-      template: `
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.mediBotAgent = void 0;
+const agent_1 = require("@mastra/core/agent");
+const memory_1 = require("@mastra/memory");
+const google_vertex_1 = require("@ai-sdk/google-vertex");
+const doctorSearch_1 = require("../tools/doctorSearch");
+const knowledgeSearch_1 = require("../tools/knowledgeSearch");
+const mediBotMemory = new memory_1.Memory({
+    options: {
+        lastMessages: 20,
+        workingMemory: {
+            enabled: true,
+            template: `
 # Patient Profile
 ## Demographics
 - Name: 
@@ -39,14 +38,13 @@ const mediBotMemory = new Memory({
 - Recommendations given: 
 - Follow-up needed: 
 `,
+        },
     },
-  },
 });
-
-export const mediBotAgent = new Agent({
-  id: 'medibot-agent',
-  name: 'MediBot Healthcare Assistant',
-  instructions: `
+exports.mediBotAgent = new agent_1.Agent({
+    id: 'medibot-agent',
+    name: 'MediBot Healthcare Assistant',
+    instructions: `
 You are a SUPPLEMENTARY healthcare guidance tool - NOT a replacement for emergency services or professional medical care.
 
 IMPORTANT: You provide health GUIDANCE and EDUCATION only. You do NOT diagnose or prescribe medication.
@@ -237,10 +235,11 @@ Use when:
 
 Remember: Your role is to guide, educate, and support - not to diagnose or replace doctors.
 `,
-  model: vertex('gemini-2.5-pro'), // Stable Vertex model
-  memory: mediBotMemory,
-  tools: {
-    searchDoctors: searchDoctorsTool,
-    knowledgeSearch: knowledgeSearchTool,
-  },
+    model: (0, google_vertex_1.vertex)('gemini-2.5-pro'),
+    memory: mediBotMemory,
+    tools: {
+        searchDoctors: doctorSearch_1.searchDoctorsTool,
+        knowledgeSearch: knowledgeSearch_1.knowledgeSearchTool,
+    },
 });
+//# sourceMappingURL=mediBotAgent.js.map

@@ -1,4 +1,15 @@
 import { query } from '../src/lib/db';
+import { pbkdf2Sync, randomBytes } from 'crypto';
+
+const PASSWORD_ITERATIONS = 120000;
+const PASSWORD_KEY_LENGTH = 32;
+const PASSWORD_DIGEST = 'sha256';
+
+function hashPassword(password: string) {
+  const salt = randomBytes(16).toString('base64url');
+  const hash = pbkdf2Sync(password, salt, PASSWORD_ITERATIONS, PASSWORD_KEY_LENGTH, PASSWORD_DIGEST).toString('base64url');
+  return `${PASSWORD_ITERATIONS}.${salt}.${hash}`;
+}
 
 async function seed() {
   console.log('Seeding database...');
@@ -37,6 +48,17 @@ async function seed() {
     `);
 
     await query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        full_name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        role VARCHAR(32) NOT NULL DEFAULT 'patient',
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    await query(`
       CREATE TABLE IF NOT EXISTS medical_records (
         id SERIAL PRIMARY KEY,
         patient_id VARCHAR(255) NOT NULL,
@@ -48,7 +70,7 @@ async function seed() {
     `);
 
     // Clear existing data
-    await query('TRUNCATE appointments, medical_records, doctors RESTART IDENTITY');
+    await query('TRUNCATE appointments, medical_records, doctors, users RESTART IDENTITY');
 
     const doctors = [
       { name: "Dr. Sarah Plain", specialty: "General Practitioner", hospital: "City General", experience: 5, bio: "Empathetic GP with a focus on preventative care." },
@@ -81,6 +103,19 @@ async function seed() {
             [doctorId, 'user_mock_123', 'John Doe', 'pending', tomorrow, 'Persistent cough and fever']
          );
       }
+    }
+
+    const users = [
+      { fullName: 'MediBot Admin', email: 'admin@mediq.local', password: 'admin123', role: 'admin' },
+      { fullName: 'Dr. Sarah Plain', email: 'doctor@mediq.local', password: 'doctor123', role: 'doctor' },
+      { fullName: 'Demo Patient', email: 'patient@mediq.local', password: 'patient123', role: 'patient' },
+    ];
+
+    for (const user of users) {
+      await query(
+        'INSERT INTO users (full_name, email, password_hash, role) VALUES ($1, $2, $3, $4)',
+        [user.fullName, user.email, hashPassword(user.password), user.role]
+      );
     }
 
     console.log('Seeding completed successfully.');
