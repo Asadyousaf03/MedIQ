@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: mediq-api
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: PORT
+        value: "10000"
+      # Set these in the Render dashboard (do not commit secrets):
+      # POSTGRES_CONNECTION_STRING
+      # AUTH_SECRET
+      # CORS_ORIGIN (your Vercel URL)
+      # GOOGLE_VERTEX_PROJECT / GOOGLE_VERTEX_LOCATION / credentials

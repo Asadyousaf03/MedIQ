@@ -54,9 +54,11 @@ async function seed() {
         email VARCHAR(255) NOT NULL UNIQUE,
         password_hash TEXT NOT NULL,
         role VARCHAR(32) NOT NULL DEFAULT 'patient',
+        doctor_id INT REFERENCES doctors(id),
         created_at TIMESTAMP NOT NULL DEFAULT NOW()
       );
     `);
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS doctor_id INT REFERENCES doctors(id);`);
 
     await query(`
       CREATE TABLE IF NOT EXISTS medical_records (
@@ -70,7 +72,7 @@ async function seed() {
     `);
 
     // Clear existing data
-    await query('TRUNCATE appointments, medical_records, doctors, users RESTART IDENTITY');
+    await query('TRUNCATE appointments, medical_records, users, doctors RESTART IDENTITY CASCADE');
 
     const doctors = [
       { name: "Dr. Sarah Plain", specialty: "General Practitioner", hospital: "City General", experience: 5, bio: "Empathetic GP with a focus on preventative care." },
@@ -85,12 +87,17 @@ async function seed() {
       { name: "Dr. Doogie Howser", specialty: "Pediatrics", hospital: "Eastman Medical Center", experience: 2, bio: "Young prodigy specializing in pediatric care." }
     ];
 
+    let sarahDoctorId: number | null = null;
+
     for (const doc of doctors) {
       const res = await query(
         'INSERT INTO doctors (name, specialty, hospital, experience, bio) VALUES ($1, $2, $3, $4, $5) RETURNING id',
         [doc.name, doc.specialty, doc.hospital, doc.experience, doc.bio]
       );
       const doctorId = res.rows[0].id;
+      if (doc.name === 'Dr. Sarah Plain') {
+        sarahDoctorId = doctorId;
+      }
       
       // Seed some sample appointments for the first few doctors
       if (['General Practitioner', 'Internal Medicine'].includes(doc.specialty)) {
@@ -106,19 +113,22 @@ async function seed() {
     }
 
     const users = [
-      { fullName: 'MediBot Admin', email: 'admin@mediq.local', password: 'admin123', role: 'admin' },
-      { fullName: 'Dr. Sarah Plain', email: 'doctor@mediq.local', password: 'doctor123', role: 'doctor' },
-      { fullName: 'Demo Patient', email: 'patient@mediq.local', password: 'patient123', role: 'patient' },
+      { fullName: 'MediBot Admin', email: 'admin@mediq.local', password: 'admin123', role: 'admin', doctorId: null as number | null },
+      { fullName: 'Dr. Sarah Plain', email: 'doctor@mediq.local', password: 'doctor123', role: 'doctor', doctorId: sarahDoctorId },
+      { fullName: 'Demo Patient', email: 'patient@mediq.local', password: 'patient123', role: 'patient', doctorId: null as number | null },
     ];
 
     for (const user of users) {
       await query(
-        'INSERT INTO users (full_name, email, password_hash, role) VALUES ($1, $2, $3, $4)',
-        [user.fullName, user.email, hashPassword(user.password), user.role]
+        'INSERT INTO users (full_name, email, password_hash, role, doctor_id) VALUES ($1, $2, $3, $4, $5)',
+        [user.fullName, user.email, hashPassword(user.password), user.role, user.doctorId]
       );
     }
 
     console.log('Seeding completed successfully.');
+    if (sarahDoctorId) {
+      console.log(`Linked doctor@mediq.local → doctors.id=${sarahDoctorId}`);
+    }
   } catch (err) {
     console.error('Error seeding database:', err);
   } finally {

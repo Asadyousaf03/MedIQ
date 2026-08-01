@@ -15,7 +15,12 @@ const pdfParse = require('pdf-parse');
 const app = express();
 const port = process.env.PORT || 3001;
 
-app.use(cors());
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(bodyParser.json());
 
 // Configure multer for file uploads

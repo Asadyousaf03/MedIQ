@@ -5,6 +5,7 @@ const protectedRoutes: Array<{ pattern: RegExp; roles: AuthRole[] }> = [
   { pattern: /^\/admin(?:\/.*)?$/, roles: ['admin'] },
   { pattern: /^\/doctor(?:\/.*)?$/, roles: ['doctor'] },
   { pattern: /^\/patient(?:\/.*)?$/, roles: ['patient', 'doctor', 'admin'] },
+  { pattern: /^\/chat(?:\/.*)?$/, roles: ['patient', 'doctor', 'admin'] },
 ];
 
 export default async function middleware(request: NextRequest) {

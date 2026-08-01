@@ -1,20 +1,20 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, Fraunces } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const bodyFont = Plus_Jakarta_Sans({
+  variable: "--font-body",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const displayFont = Fraunces({
+  variable: "--font-display",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "MedIQ",
-  description: "Advanced AI Healthcare Assistant",
+  title: "MedIQ — AI Healthcare Assistant",
+  description: "Describe your symptoms, understand lab reports, and book the right doctor in minutes with MedIQ's AI-powered triage and appointment booking assistant.",
 };
 
 export default function RootLayout({
@@ -25,7 +25,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${bodyFont.variable} ${displayFont.variable} antialiased bg-[var(--background)] text-[var(--foreground)]`}
       >
         {children}
       </body>

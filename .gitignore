@@ -1,2 +1,11 @@
 .env
+.env.local
+webapp/.env
+webapp/.env.local
 node_modules/
+webapp/node_modules/
+dist/
+uploads/
+.cursor/
+.vercel/
+webapp/.vercel/

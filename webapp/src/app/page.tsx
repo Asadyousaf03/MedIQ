@@ -1,99 +1,97 @@
 import Link from 'next/link';
-import { Activity, Shield, Stethoscope, MessageSquare, ClipboardList } from 'lucide-react';
+import { MessageSquare, ClipboardList, Stethoscope, ArrowRight } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
+import AppNav from '@/components/AppNav';
 
 export default async function Home() {
   const currentUser = await getCurrentUser();
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="absolute top-4 right-4">
-        {currentUser ? (
-          <Link href="/sign-out" className="rounded-full bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-200 hover:bg-gray-50">
-            Sign out
-          </Link>
-        ) : (
-          <Link href="/sign-in" className="rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-500">
-            Sign in
-          </Link>
-        )}
-      </div>
+    <div className="min-h-screen">
+      <AppNav currentUser={currentUser} />
 
-      <div className="max-w-md w-full space-y-8 text-center mt-10">
-        <div>
-          <Activity className="mx-auto h-12 w-12 text-blue-600" />
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            Welcome to MedIQ Space
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Please choose your portal destination below
+      <main className="mx-auto flex w-full max-w-4xl flex-col items-center px-4 py-20 text-center sm:px-6 lg:px-8">
+        <span className="rounded-full border border-[var(--border)] bg-white/70 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--primary)]">
+          AI Healthcare Assistant
+        </span>
+
+        <h1 className="font-display mt-8 text-5xl font-semibold tracking-tight text-slate-900 sm:text-6xl">
+          MedIQ
+        </h1>
+
+        <p className="mt-6 max-w-2xl text-xl font-medium text-slate-700 sm:text-2xl">
+          Understand your symptoms and get matched to the right doctor — in one conversation.
+        </p>
+        <p className="mt-4 max-w-xl text-base text-slate-500">
+          MedIQ triages your symptoms, explains lab reports in plain language, and books your appointment automatically, so you spend less time searching and more time getting care.
+        </p>
+
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+          {currentUser ? (
+            <Link href="/chat" className="btn-primary text-base">
+              Try the chat
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          ) : (
+            <>
+              <Link href="/sign-in" className="btn-primary text-base">
+                Sign in
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link href="/sign-up" className="btn-secondary text-base">
+                Create an account
+              </Link>
+            </>
+          )}
+        </div>
+
+        {currentUser ? (
+          <div className="mt-16 grid w-full grid-cols-1 gap-4 text-left sm:grid-cols-2 lg:grid-cols-3">
+            <Link href="/chat" className="card-surface group flex items-start gap-4 p-5 transition hover:border-[var(--primary)]">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-[var(--primary)]">
+                <MessageSquare className="h-5 w-5" />
+              </span>
+              <div>
+                <h3 className="text-base font-semibold text-slate-900">AI Chat</h3>
+                <p className="mt-1 text-sm text-slate-500">Describe symptoms, upload lab reports, get guidance</p>
+              </div>
+            </Link>
+
+            <Link href="/patient" className="card-surface group flex items-start gap-4 p-5 transition hover:border-[var(--primary)]">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-[var(--primary)]">
+                <ClipboardList className="h-5 w-5" />
+              </span>
+              <div>
+                <h3 className="text-base font-semibold text-slate-900">Patient Portal</h3>
+                <p className="mt-1 text-sm text-slate-500">View your appointment history and next visit</p>
+              </div>
+            </Link>
+
+            {currentUser.role === 'doctor' || currentUser.role === 'admin' ? (
+              <Link href="/doctor" className="card-surface group flex items-start gap-4 p-5 transition hover:border-[var(--primary)]">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-[var(--primary)]">
+                  <Stethoscope className="h-5 w-5" />
+                </span>
+                <div>
+                  <h3 className="text-base font-semibold text-slate-900">Doctor Portal</h3>
+                  <p className="mt-1 text-sm text-slate-500">Review your appointment queue</p>
+                </div>
+              </Link>
+            ) : null}
+          </div>
+        ) : null}
+      </main>
+
+      <footer className="border-t border-[var(--border)] bg-white/60 py-8">
+        <div className="mx-auto max-w-4xl px-4 text-center text-xs text-slate-500 sm:px-6 lg:px-8">
+          <p className="font-medium text-slate-600">Demo credentials</p>
+          <p className="mt-1">
+            Patient: <span className="font-mono text-slate-700">patient@mediq.local</span> / <span className="font-mono text-slate-700">patient123</span>
+            {'  ·  '}
+            Doctor: <span className="font-mono text-slate-700">doctor@mediq.local</span> / <span className="font-mono text-slate-700">doctor123</span>
           </p>
         </div>
-
-        <div className="mt-8 space-y-4">
-          {!currentUser ? (
-            <div className="p-4 bg-white rounded-xl shadow-sm border border-gray-100">
-              <p className="mb-4 text-gray-500">Sign in to access your dashboard</p>
-              <div className="flex gap-3">
-                <Link
-                  href="/sign-in"
-                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  href="/sign-up"
-                  className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  Sign Up
-                </Link>
-              </div>
-            </div>
-          ) : null}
-
-          {currentUser?.role === 'patient' || currentUser?.role === 'admin' || currentUser?.role === 'doctor' ? (
-            <>
-              <Link href="/chat" className="flex items-center p-4 bg-white hover:bg-blue-50 transition rounded-xl shadow border border-gray-200 cursor-pointer text-left w-full group">
-                <MessageSquare className="h-6 w-6 text-blue-500 mr-4 group-hover:scale-110 transition" />
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900">Patient Chat</h3>
-                  <p className="text-sm text-gray-500">Talk to the AI Medical Assistant</p>
-                </div>
-              </Link>
-
-              <Link href="/patient" className="flex items-center p-4 bg-white hover:bg-indigo-50 transition rounded-xl shadow border border-gray-200 cursor-pointer text-left w-full group">
-                <ClipboardList className="h-6 w-6 text-indigo-500 mr-4 group-hover:scale-110 transition" />
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900">Patient Portal</h3>
-                  <p className="text-sm text-gray-500">View your care history, timeline, and next steps</p>
-                </div>
-              </Link>
-
-              {currentUser?.role === 'doctor' || currentUser?.role === 'admin' ? (
-                <Link href="/doctor" className="flex items-center p-4 bg-white hover:bg-green-50 transition rounded-xl shadow border border-gray-200 cursor-pointer text-left w-full group">
-                  <Stethoscope className="h-6 w-6 text-green-500 mr-4 group-hover:scale-110 transition" />
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900">Provider Portal</h3>
-                    <p className="text-sm text-gray-500">View appointments & queue</p>
-                  </div>
-                </Link>
-              ) : null}
-
-              {currentUser?.role === 'admin' ? (
-                <Link href="/admin" className="flex items-center p-4 bg-slate-800 hover:bg-slate-700 transition rounded-xl shadow border border-slate-700 cursor-pointer text-left w-full group">
-                  <Shield className="h-6 w-6 text-indigo-400 mr-4 group-hover:scale-110 transition" />
-                  <div>
-                    <h3 className="text-lg font-medium text-white">Admin Dashboard</h3>
-                    <p className="text-sm text-indigo-300">System settings and users</p>
-                  </div>
-                </Link>
-              ) : null}
-            </>
-          ) : null}
-        </div>
-      </div>
+      </footer>
     </div>
   );
 }
-
-

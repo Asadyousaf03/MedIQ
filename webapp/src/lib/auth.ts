@@ -49,9 +49,11 @@ export async function ensureAuthSchema() {
       email VARCHAR(255) NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
       role VARCHAR(32) NOT NULL DEFAULT 'patient',
+      doctor_id INT,
       created_at TIMESTAMP NOT NULL DEFAULT NOW()
     );
   `);
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS doctor_id INT;`);
 }
 
 export function hashPassword(password: string) {
