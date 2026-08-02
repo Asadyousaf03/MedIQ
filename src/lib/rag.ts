@@ -1,7 +1,7 @@
 import { MDocument } from '@mastra/rag';
 import { PgVector } from "@mastra/pg";
 import { embedMany } from "ai";
-import { vertex } from '@ai-sdk/google-vertex';
+import { google } from '@ai-sdk/google';
 import path from 'path';
 import fs from 'fs';
 
@@ -64,7 +64,7 @@ export async function ingestPDF(filePath: string, source: string) {
     console.log(`  Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(chunks.length / BATCH_SIZE)}...`);
     
     const { embeddings } = await embedMany({
-      model: vertex.textEmbeddingModel('text-embedding-004'),
+      model: google.textEmbeddingModel('text-embedding-004'),
       values: batchChunks.map((chunk) => chunk.text),
     });
     
@@ -90,7 +90,7 @@ export async function ingestPDF(filePath: string, source: string) {
 export async function retrieveKnowledge(query: string, topK: number = 5, sourceFilter?: string) {
   // Generate embedding for the query
   const { embeddings } = await embedMany({
-    model: vertex.textEmbeddingModel('text-embedding-004'),
+    model: google.textEmbeddingModel('text-embedding-004'),
     values: [query],
   });
 

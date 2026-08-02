@@ -1,6 +1,6 @@
 import { Agent } from '@mastra/core/agent';
 import { Memory } from '@mastra/memory';
-import { vertex } from '@ai-sdk/google-vertex';
+import { google } from '@ai-sdk/google';
 import { searchDoctorsTool } from '../tools/doctorSearch';
 import { knowledgeSearchTool } from '../tools/knowledgeSearch';
 
@@ -237,7 +237,7 @@ Use when:
 
 Remember: Your role is to guide, educate, and support - not to diagnose or replace doctors.
 `,
-  model: vertex('gemini-2.5-pro'),
+  model: google('gemini-2.5-flash'),
   memory: mediBotMemory,
   tools: {
     searchDoctors: searchDoctorsTool,
