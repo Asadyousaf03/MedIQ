@@ -2,6 +2,9 @@ import { Pool } from 'pg';
 
 const pool = new Pool({
   connectionString: process.env.POSTGRES_CONNECTION_STRING,
+  ssl: process.env.POSTGRES_CONNECTION_STRING?.includes('supabase')
+    ? { rejectUnauthorized: false }
+    : undefined,
 });
 
 export const query = async (text: string, params?: any[]) => {
