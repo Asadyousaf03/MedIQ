@@ -42,18 +42,28 @@ const SESSION_COOKIE_OPTIONS = {
 };
 
 export async function ensureAuthSchema() {
-  await query(`
-    CREATE TABLE IF NOT EXISTS users (
-      id SERIAL PRIMARY KEY,
-      full_name VARCHAR(255) NOT NULL,
-      email VARCHAR(255) NOT NULL UNIQUE,
-      password_hash TEXT NOT NULL,
-      role VARCHAR(32) NOT NULL DEFAULT 'patient',
-      doctor_id INT,
-      created_at TIMESTAMP NOT NULL DEFAULT NOW()
-    );
-  `);
-  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS doctor_id INT;`);
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        full_name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        role VARCHAR(32) NOT NULL DEFAULT 'patient',
+        doctor_id INT,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+  } catch (error) {
+    console.error('ensureAuthSchema create users failed:', error);
+  }
+
+  try {
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS doctor_id INT;`);
+  } catch (error) {
+    // Non-owners (e.g. limited Supabase roles) can still sign in without ALTER.
+    console.warn('ensureAuthSchema alter doctor_id skipped:', error);
+  }
 }
 
 export function hashPassword(password: string) {
