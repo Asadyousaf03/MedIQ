@@ -237,7 +237,7 @@ Use when:
 
 Remember: Your role is to guide, educate, and support - not to diagnose or replace doctors.
 `,
-  model: google('gemini-2.5-flash'),
+  model: google('gemini-flash-latest'),
   memory: mediBotMemory,
   tools: {
     searchDoctors: searchDoctorsTool,
