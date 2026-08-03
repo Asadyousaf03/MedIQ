@@ -15,8 +15,8 @@ const vectorStore = new PgVector({
   connectionString: process.env.POSTGRES_CONNECTION_STRING!,
 });
 
-const INDEX_NAME = 'knowledge_embeddings_v4';
-const EMBEDDING_DIMENSION = 768; // Matches Vertex text-embedding-004
+const INDEX_NAME = 'knowledge_embeddings_v5';
+const EMBEDDING_DIMENSION = 3072; // gemini-embedding-001
 
 // 2. Optimized Ingestion (The Mastra Way)
 export async function ingestPDF(filePath: string, source: string) {
@@ -64,7 +64,7 @@ export async function ingestPDF(filePath: string, source: string) {
     console.log(`  Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(chunks.length / BATCH_SIZE)}...`);
     
     const { embeddings } = await embedMany({
-      model: google.textEmbeddingModel('text-embedding-004'),
+      model: google.textEmbeddingModel('gemini-embedding-001'),
       values: batchChunks.map((chunk) => chunk.text),
     });
     
@@ -90,7 +90,7 @@ export async function ingestPDF(filePath: string, source: string) {
 export async function retrieveKnowledge(query: string, topK: number = 5, sourceFilter?: string) {
   // Generate embedding for the query
   const { embeddings } = await embedMany({
-    model: google.textEmbeddingModel('text-embedding-004'),
+    model: google.textEmbeddingModel('gemini-embedding-001'),
     values: [query],
   });
 
