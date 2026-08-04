@@ -49,9 +49,11 @@ export default async function AppNav({ currentUser }: AppNavProps = {}) {
                   Doctor Portal
                 </Link>
               ) : null}
-              <Link href="/sign-out" className="btn-secondary ml-1 !py-2 !px-3.5 text-sm">
-                Sign out
-              </Link>
+              <form action="/sign-out" method="post" className="ml-1">
+                <button type="submit" className="btn-secondary !py-2 !px-3.5 text-sm">
+                  Sign out
+                </button>
+              </form>
             </>
           ) : (
             <Link href="/sign-in" className="btn-primary ml-1 !py-2 !px-4 text-sm">

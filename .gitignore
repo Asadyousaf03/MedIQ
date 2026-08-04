@@ -12,3 +12,7 @@ webapp/.vercel/
 
 scripts/.render-env-payload.json
 scripts/.render-mcp-args.json
+
+# Local portfolio screenshot exports
+portfolio-shots/
+

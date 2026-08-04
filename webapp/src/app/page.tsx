@@ -256,9 +256,8 @@ export default async function Home() {
       </section>
 
       <footer className="border-t border-[var(--border)] bg-white/70 py-8">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 text-sm text-slate-500 sm:flex-row sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-7xl items-center justify-center px-4 sm:px-6 lg:px-8">
           <p className="font-display text-base font-semibold text-slate-800">MedIQ</p>
-          <p>AI healthcare guidance for portfolio demo use.</p>
         </div>
       </footer>
     </div>

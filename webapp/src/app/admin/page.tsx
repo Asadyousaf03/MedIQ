@@ -28,7 +28,11 @@ export default async function AdminDashboard() {
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-slate-400">System Status: <span className="text-green-400">Online</span></span>
-              <Link href="/sign-out" className="text-sm font-medium text-indigo-300 hover:text-indigo-200">Sign out</Link>
+              <form action="/sign-out" method="post">
+                <button type="submit" className="text-sm font-medium text-indigo-300 hover:text-indigo-200">
+                  Sign out
+                </button>
+              </form>
             </div>
           </div>
         </div>
